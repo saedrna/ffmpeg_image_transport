@@ -146,6 +146,9 @@ private:
   AVRational frameRate_{100, 1};
   int64_t bitRate_{1000000};
   bool usesHardwareFrames_{false};
+  // 0x10 = 16 = 00010000 for DJI, others 5 are fixed
+  // e.g. 0x00 0x00 0x00 0x01 0x09 0x10
+  uint8_t audByte_{0x10};
   // ------ libav state
   AVCodecContext * codecContext_{nullptr};
   AVBufferRef * hwDeviceContext_{nullptr};

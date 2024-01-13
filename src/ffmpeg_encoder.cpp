@@ -96,6 +96,7 @@ void FFMPEGEncoder::setParameters(rclcpp::Node * node)
   bitRate_ = get_safe_param<int64_t>(node, ns + "bit_rate", 8242880);
   GOPSize_ = get_safe_param<int64_t>(node, ns + "gop_size", 15);
   pixFormat_ = pixelFormat(get_safe_param<std::string>(node, ns + "pixel_format", ""));
+  audByte_ = get_safe_param<int>(node, ns + "aud_byte", 0x10);
   RCLCPP_INFO_STREAM(
     logger_, "enc: " << codecName_ << " prof: " << profile_ << " preset: " << preset_);
   RCLCPP_INFO_STREAM(
@@ -381,9 +382,19 @@ int FFMPEGEncoder::drainPacket(const Header & header, int width, int height)
     packet->pts = pk.pts;
     packet->flags = pk.flags;
     memcpy(&(packet->data[0]), pk.data, pk.size);
+    if (audByte_ != 0) {
+      // append six AUD information to packet
+      packet->data.resize(pk.size + 6);
+      packet->data[pk.size + 0] = 0x00;      // fixed
+      packet->data[pk.size + 1] = 0x00;      // fixed
+      packet->data[pk.size + 2] = 0x00;      // fixed
+      packet->data[pk.size + 3] = 0x01;      // fixed
+      packet->data[pk.size + 4] = 0x09;      // mean H264 AUD
+      packet->data[pk.size + 5] = audByte_;  // user defined
+    }
     if (measurePerformance_) {
       t2 = rclcpp::Clock().now();
-      totalOutBytes_ += pk.size;
+      totalOutBytes_ += audByte_ != 0 ? pk.size + 6 : pk.size;
       tdiffCopyOut_.update((t2 - t1).seconds());
     }
     packet->header = header;
